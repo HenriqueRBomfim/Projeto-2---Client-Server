@@ -25,7 +25,6 @@ import random
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
 serialName = "COM5"                  # Windows(variacao de)
 
-
 def main():
     try:
         print("Iniciou o main")
@@ -33,14 +32,11 @@ def main():
         #para declarar esse objeto é o nome da porta.
         com1 = enlace(serialName)
         
-    
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print("Abriu a comunicação")
         
-           
-                  
         #aqui você deverá gerar os dados a serem transmitidos. 
         #seus dados a serem transmitidos são um array bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
@@ -69,7 +65,7 @@ def main():
 
         #txBuffer = b'\x12\x13\xAA'  #isso é um array de bytes
        
-        print("meu array de bytes tem tamanho {}" .format(len(txBuffer)))
+        #print("meu array de bytes tem tamanho {}" .format(len(txBuffer)))
         #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
        
             
@@ -80,72 +76,47 @@ def main():
                
         print ("A transmissão vai começar")
 
+        bitFim = b'\xCC'
+        bitSacrificio = b'\x11'
+        bitErro = b'\xDD'
         com1.enable()
         time.sleep(.2)
-        com1.sendData(b'11')
+        com1.sendData(bitSacrificio)
         time.sleep(1)
         
         i = 0
         while i < len(comandos_a_serem_enviados):
             com1.sendData(np.asarray(tamanho_comandos_a_serem_enviados[i]))
+            while com1.tx.getIsBussy():
+                pass
             com1.sendData(np.asarray(comandos_a_serem_enviados[i]))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
             while com1.tx.getIsBussy():
                 pass
-            #com1.sendData(b'11')
-            time.sleep(1)
+            time.sleep(0.05)
             i += 1
 
-
-
-        time.sleep(5)
-
-        rxBuffer, nRx = com1.getData(txLen)
-        
-        print("recebeu {} bytes" .format(len(rxBuffer)))
-        
-        for i in range(len(rxBuffer)):
-            print("recebeu {}" .format(rxBuffer[i]))
-          
-        # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
-        # O método não deve estar fincionando quando usado como abaixo. deve estar retornando zero. Tente entender como esse método funciona e faça-o funcionar.
-        
-        """
-        txSize = 0
-        while com1.tx.transLen < len(txBuffer):
-            time.sleep(2) 
-        """
-
+        com1.sendData(bitFim)
         while com1.tx.getIsBussy():
             pass
-
-        txSize = com1.tx.getStatus()
-        print('enviou = {}' .format(txSize))
         
-        #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
-        #Observe o que faz a rotina dentro do thread RX
-        #print um aviso de que a recepção vai começar.
-        
-        print ("Salvando dados no arquivo :")
-        print(" - {}".format(imageW))
-        
-        #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
-        #Veja o que faz a funcao do enlaceRX  getBufferLen
-      
-        #acesso aos bytes recebidos
-        txLen = len(txBuffer)
-        rxBuffer, nRx = com1.getData(txLen)
+        tempo_inicial = time.time()//1
+        while len(rxBuffer) == 0:
+            if time.time()//1 - tempo_inicial > 5:
+                print("time out")
+                break
+            rxBuffer, nRx = com1.getData(1)
         
         print("recebeu {} bytes" .format(len(rxBuffer)))
         
-        for i in range(len(rxBuffer)):
-            print("recebeu {}" .format(rxBuffer[i]))
-        
-        f = open(imageW, 'wb')
-        f.write(rxBuffer)
+        if len(rxBuffer) != 0:
+            Nrecebido = int.from_bytes(rxBuffer[0])
+            print("Recebeu {} comandos" .format(Nrecebido))
+            if Nrecebido != N:
+                com1.sendData(bitErro)
+                print("Inconsistência no número de comandos")
+                while com1.tx.getIsBussy():
+                    pass
 
-        # Fecha arquivo de imagem
-        f.close()
-        
         # Encerra comunicação
         print("-------------------------")
         print("Comunicação encerrada")
