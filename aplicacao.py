@@ -13,6 +13,7 @@
 from enlace import *
 import time
 import numpy as np
+import random
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -44,14 +45,27 @@ def main():
         #seus dados a serem transmitidos são um array bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         
-        imageR = './imgs/imageR.png'
-        imageW = './imgs/imageW.png'
+        comando_1 = b'\x00\x00\x00\x00'
+        comando_2 = b'\x00\x00\xBB\x00'
+        comando_3 = b'\xBB\x00\x00'
+        comando_4 = b'\x00\xBB\x00'
+        comando_5 = b'\x00\x00\xBB'
+        comando_6 = b'\x00\xAA'
+        comando_7 = b'\xBB\x00'
+        comando_8 = b'\x00'
+        comando_9 = b'\xBB'
+        comandos = [comando_1, comando_2, comando_3, comando_4, comando_5, comando_6, comando_7, comando_8, comando_9]
 
-        # Carrega imagem
-        print("Carregando imagem para transmissão :")
-        print(" - {}".format(imageR))
-        print("----------------------")
-        txBuffer = open(imageR, 'rb').read()
+        N = random.randint(10, 30)
+
+        comandos_a_serem_enviados = []
+        tamanho_comandos_a_serem_enviados = []
+
+        i = 0
+        while i < N:
+            comandos_a_serem_enviados.append(random.choice(comandos))
+            tamanho_comandos_a_serem_enviados.append(int.to_bytes(len(random.choice(comandos))))
+            i += 1
 
         #txBuffer = b'\x12\x13\xAA'  #isso é um array de bytes
        
@@ -65,8 +79,32 @@ def main():
         #Cuidado! Apenas trasmita arrays de bytes!
                
         print ("A transmissão vai começar")
+
+        com1.enable()
+        time.sleep(.2)
+        com1.sendData(b'11')
+        time.sleep(1)
         
-        com1.sendData(np.asarray(txBuffer))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
+        i = 0
+        while i < len(comandos_a_serem_enviados):
+            com1.sendData(np.asarray(tamanho_comandos_a_serem_enviados[i]))
+            com1.sendData(np.asarray(comandos_a_serem_enviados[i]))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
+            while com1.tx.getIsBussy():
+                pass
+            #com1.sendData(b'11')
+            time.sleep(1)
+            i += 1
+
+
+
+        time.sleep(5)
+
+        rxBuffer, nRx = com1.getData(txLen)
+        
+        print("recebeu {} bytes" .format(len(rxBuffer)))
+        
+        for i in range(len(rxBuffer)):
+            print("recebeu {}" .format(rxBuffer[i]))
           
         # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
         # O método não deve estar fincionando quando usado como abaixo. deve estar retornando zero. Tente entender como esse método funciona e faça-o funcionar.
