@@ -85,16 +85,16 @@ def main():
             item_da_lista = comandos[random.randint(0, 8)]
             tamanho = len(item_da_lista)
             enviar = bytes([tamanho])
-
             print('enviado tamanho', np.asarray(enviar))
-
+            
             com1.sendData(np.asarray(enviar))
-            time.sleep(0.2)
+            
+            time.sleep(1)
             com1.sendData(np.asarray(item_da_lista))
             print('mostrando o byte enviado ' ,item_da_lista)
-            time.sleep(0.2)
+            time.sleep(1)
 
-            print("Comando número: ", i)
+            print("Comando número: ",i)
 
             i += 1
         
