@@ -23,7 +23,7 @@ import random
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM5"                  # Windows(variacao de)
+serialName = "COM6"                  # Windows(variacao de)
 
 def main():
     try:
@@ -55,12 +55,10 @@ def main():
         N = random.randint(10, 30)
 
         comandos_a_serem_enviados = []
-        tamanho_comandos_a_serem_enviados = []
 
         i = 0
         while i < N:
-            comandos_a_serem_enviados.append(random.choice(comandos))
-            tamanho_comandos_a_serem_enviados.append(int.to_bytes(len(random.choice(comandos))))
+            comandos_a_serem_enviados.append(comandos[random.randint(0, 8)])
             i += 1
 
         #txBuffer = b'\x12\x13\xAA'  #isso é um array de bytes
@@ -77,51 +75,52 @@ def main():
         print ("A transmissão vai começar")
 
         bitFim = b'\xCC'
-        bitSacrificio = b'\x11'
         bitErro = b'\xDD'
-        com1.enable()
         time.sleep(.2)
-        com1.sendData(bitSacrificio)
+        com1.sendData(b'00')
         time.sleep(1)
         
         i = 0
-        while i < len(comandos_a_serem_enviados):
-            com1.sendData(np.asarray(tamanho_comandos_a_serem_enviados[i]))
-            while com1.tx.getIsBussy():
-                pass
-            com1.sendData(np.asarray(comandos_a_serem_enviados[i]))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
-            while com1.tx.getIsBussy():
-                pass
-            time.sleep(0.05)
-            i += 1
+        while i < N:
+            item_da_lista = comandos[random.randint(0, 8)]
+            tamanho = len(item_da_lista)
+            enviar = bytes([tamanho])
 
-        com1.sendData(bitFim)
-        while com1.tx.getIsBussy():
-            pass
+            print('enviado tamanho', np.asarray(enviar))
+
+            com1.sendData(np.asarray(enviar))
+            time.sleep(0.2)
+            com1.sendData(np.asarray(item_da_lista))
+            print('mostrando o byte enviado ' ,item_da_lista)
+            time.sleep(0.2)
+
+            print("Comando número: ", i)
+
+            i += 1
+        
+        com1.sendData(np.asarray(bitFim))
+        print("Enviou Bit Fim")
         
         tempo_inicial = time.time()//1
-        while len(rxBuffer) == 0:
-            if time.time()//1 - tempo_inicial > 5:
+        while com1.rx.getIsEmpty():
+            tempo2 = time.time()//1
+            if ((tempo2 - tempo_inicial) >= 5):
                 print("time out")
                 break
+        else:
             rxBuffer, nRx = com1.getData(1)
-        
-        print("recebeu {} bytes" .format(len(rxBuffer)))
-        
-        if len(rxBuffer) != 0:
-            Nrecebido = int.from_bytes(rxBuffer[0])
+            Nrecebido = rxBuffer[0]
             print("Recebeu {} comandos" .format(Nrecebido))
             if Nrecebido != N:
                 com1.sendData(bitErro)
                 print("Inconsistência no número de comandos")
-                while com1.tx.getIsBussy():
-                    pass
 
         # Encerra comunicação
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
         com1.disable()
+        
         
     except Exception as erro:
         print("ops! :-\\")
