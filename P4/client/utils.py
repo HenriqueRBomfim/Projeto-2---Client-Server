@@ -4,7 +4,7 @@ from math import ceil
 
 HEAD_handshake_server = bytes([5,1,0,0,0,0,0,0,0,0,0,0])
 
-EOP = bytes([0,0,0]) # Montando o EOP
+EOP =  b"\xAA\xBB\xCC\xDD" # Montando o EOP
 
 
 def atualiza_tempo(tempo_ref):
@@ -18,12 +18,13 @@ def verifica_handshake(head, is_server):
     """
     handshake = head[:2] # primeiro e segundo bytes do head
     delta_t = 0
-    conferencia = bytes([5,1])
+    # Mensagem tipo 2
+    conferencia = bytes([2,0])
     if not is_server:
         conferencia = bytes([4,0])
     while delta_t <= 5: # loop para gerar o timeout
         tempo_atual = float(time.time())
-        if handshake == conferencia: # 5 é a mensagem de handshake e 1 é a resposta positiva
+        if handshake == conferencia:
             print('Handshake realizado com sucesso')
             return True
         delta_t = atualiza_tempo(tempo_atual)

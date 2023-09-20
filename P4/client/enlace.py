@@ -41,8 +41,8 @@ class enlace(object):
         self.tx.sendBuffer(data)
         
     def getData(self, size):
-        data, check = self.rx.getNData(size)
-        if check:
-            return(data, len(data), check)
+        data, estourou_tempo = self.rx.getNData(size)
+        if estourou_tempo:
+            return(data, len(data), estourou_tempo)
         else:
-            return(None, None, check)
+            return(None, None, estourou_tempo)
