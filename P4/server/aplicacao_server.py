@@ -15,6 +15,7 @@ from enlace import *
 import time
 import numpy as np
 from utils import *
+import datetime
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -28,85 +29,104 @@ serialName = "COM3"                  # Windows(variacao de)
 
 
 
+
 def main():
     try:
-        com1 = enlace(serialName); com1.enable() # Ativa comunicacao. Inicia os threads e a comunicação serial
-        
-        while com1.rx.getIsEmpty():
+        com1 = enlace(serialName); com1.enable()
+        with open('Server4.txt', 'w') as f:
+             # Ativa comunicacao. Inicia os threads e a comunicação serial
+            
+            
 
+            ocioso = com1.rx.getIsEmpty()
+            print('Esperando o cliente se conectar')
             print("esperando 1 byte de sacrifício")
-            rxBuffer, _ = com1.getData(1); com1.rx.clearBuffer(); time.sleep(.1)
+            rxBuffer, _ = com1.getData(1); 
+            com1.rx.clearBuffer(); time.sleep(.1)
             print('1 byte de sacrifício recebido. Limpou o buffer')
-
-            HEAD_handshake_client, _ = com1.getData(12); time.sleep(.1)
+            HEAD_handshake_client, _  = com1.getData(10); time.sleep(.1)
+            f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/recebido/ 1 / 14" '\n')
             is_handshake_correct = verifica_handshake(HEAD_handshake_client[0:2], False)
-            total_of_packages = HEAD_handshake_client[4]
+            print('verifiquei handshake') #verificando se o handshake é o esperado
 
-        if is_handshake_correct:
-            payload_size = int(HEAD_handshake_client[2])
-            resto_of_handshake_client, _ = com1.getData(payload_size+3) ; time.sleep(.1)
-            handshake_client = HEAD_handshake_client + resto_of_handshake_client
-            eop_verificado = verifica_eop(handshake_client, HEAD_handshake_client)
-            if not eop_verificado:
-                return
-            handshake_server = np.asarray(HEAD_handshake_server + EOP)
-            com1.sendData(handshake_server); time.sleep(.1)
-            print('Resposta do handshake enviado')
 
-        img_received = b''
-        package_before, packages_received = 1, 0
-        while True:
-            HEAD_client, _ = com1.getData(12); time.sleep(0.5)
-            payload_size, current_package, _ = retirando_informacoes_do_head(HEAD_client)
-            print(f'Pacote {current_package} recebido')
+            if is_handshake_correct:
+                payload_size = int(HEAD_handshake_client[5])
+                total_of_packages = HEAD_handshake_client[3]
+                resto_of_handshake_client, _ = com1.getData(4) ; time.sleep(.1)
+                print(f'passou do datateste')
+                handshake_client = HEAD_handshake_client + resto_of_handshake_client
+                handshake_server = np.asarray(HEAD_handshake_server + EOP)
+                com1.sendData(handshake_server); time.sleep(.1) #mensagem do tipo2
+                f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/enviado/ 2 / 14" '\n')
+                print('Resposta do handshake enviado')
 
-            if current_package != package_before:
-                #print(f"pacote atual:{current_package},pacote anterior: {package_before}")
-                print('Erro na ordem dos pacotes recebidos.')
-                HEAD_server = bytes([6,0,0,0,0,0,0,0,0,0,0,0])
-                com1.sendData(HEAD_server+EOP); com1.disable(); return
-            else:
-                HEAD_server = bytes([7,0,0,0,0,0,0,0,0,0,0,0])
-                com1.sendData(HEAD_server+EOP); time.sleep(0.5)
-
-            packages_received += 1
-            package_before = current_package
-
-            rest_of_package_client, _ = com1.getData(payload_size + 3); time.sleep(0.2)
-            package_client = HEAD_client + rest_of_package_client
+            img_received = b''
+            package_before, packages_received = 0, 0
+            cont = 1
             
-            HEAD_client, payload_client, EOP_client = tratar_pacote_recebido(package_client) #separando head, payloas e eop.
-            if len(payload_client) != payload_size:
-                print('Tamanho do payload informado é diferente do tamanho real')
-                com1.disable(); return
-            img_received += payload_client # pegando e guardando as informações do payload
             
-            is_eop_correct = verifica_eop(package_client, HEAD_client) #verificando se eop está no lugar certo
-            if not is_eop_correct:
-                com1.sendData(bytes([6,0,0,0,0,0,0,0,0,0,0,0])+EOP)
-                # TODO placeholder para implementacao de reenvio 
-                # Aqui quando der erro no eop deve mostrar que ou o EOP esta errado ou o tamanho do payload informado est[a incorreto]]
+            while cont <= total_of_packages:
+                estourou_tempo = False
+                time_2 = time.time()//1
                 
-            if packages_received == total_of_packages:
-                break
-            if packages_received != total_of_packages:
-                package_before += 1
+                while (atualiza_tempo(time_2) < 20) and cont <= total_of_packages:
+                    time1 = time.time()//1
+                    print('sai do while de 2')
+                    while atualiza_tempo(time1) < 2:
+                        if cont <= total_of_packages: 
+                            HEAD_client, _  = com1.getData(10); time.sleep(.1)
+                            #print(f'HEAD_client: {HEAD_client}')
+                            #print(f'cont: {cont}')
+                            tipo_de_mensagem,total_of_packages, current_package, variavel, pacote_erro, ultimo_pacote_sucesso = retirando_informacoes_do_head(HEAD_client) 
+                            #print(f' tipo da mensagem: {tipo_de_mensagem}')
+                            if tipo_de_mensagem == 5:
+                                print('chegou na mensagem tipo 5')
+                                f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/recebido/ 5 / 14" '\n')
+                                print('Tempo de espera excedido')
+                                com1.disable()
+                                
+                            if tipo_de_mensagem == 3:
+                                time_2 = time.time()
+                                packages_received += 1
+                                print('chegou na mensagem tipo 3')
+                                rest_of_package_client, _ = com1.getData(variavel + 4); time.sleep(.1)
+                                package_client = HEAD_client + rest_of_package_client
+                                f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/recebido/ 3 / {variavel + 14 }/{current_package}/{total_of_packages}" '\n')
+                                HEAD_client, payload_client, EOP_client = tratar_pacote_recebido(package_client) #separando head, payloas e eop.
 
-        final_HEAD_client = bytes([1,0,0,0,0,0,0,0,0,0,0,0])
-        if packages_received != total_of_packages:
-            print('Número de pacotes recebidos diferente do total enviado')
-        else:
-            final_HEAD_client = bytes([1,0,0,0,0,1,0,0,0,0,0,0])
-            print('Transmissão foi um sucesso')
+                                if not verifica_pacote(package_client):
+                                    com1.sendData(bytes([6,0,0,0,0,0,ultimo_pacote_sucesso + 1 ,0,0,0])+EOP)
+                                    print('Pacote com erro')
+                                    f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/enviado/ 6 / 14" '\n')
 
-        final_package = final_HEAD_client + EOP
-        com1.sendData(final_package); time.sleep(.2)
-        img_received_name = 'server\imagem.png'
-        print("Salvando dados no arquivo")
-        f = open(img_received_name, 'wb')
-        f.write(img_received)
-        f.close() # fecha o arquivo de imagem
+                                    
+                                else:
+                                    print(f'Pacote {current_package} recebido')
+                                    com1.sendData(bytes([4,0,0,0,0,0,0,ultimo_pacote_sucesso,0,0])+EOP)
+                                    f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/enviado/ 4 / 14" '\n')
+                                    cont += 1
+                                    print('mensagem tipo 4 enviada')
+                                    img_received += payload_client # pegando e guardando as informações do payload
+                        
+                if atualiza_tempo(time_2) >= 20:
+                    ocioso = True
+                    com1.sendData(bytes([5,0,0,0,0,0,current_package,0,0,0])+EOP)
+                    print('Tempo de espera excedido')
+                    f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/enviado/ 5 / 14" '\n')
+                    com1.disable()
+                
+                
+            if cont != total_of_packages + 1:
+                print('Número de pacotes recebidos diferente do total enviado')
 
+            else:
+                with open('img_received.jpg', 'wb') as img:
+                    img.write(img_received)
+                print('Transmissão foi um sucesso')
+                print('Salvando dados no arquivo')
+            
+     
         print("-------------------------\nComunicação encerrada\n-------------------------"); com1.disable()
         
 
