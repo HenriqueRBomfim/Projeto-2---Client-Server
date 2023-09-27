@@ -96,7 +96,7 @@ def main():
         #caso inconsistente
         comprimento_err = len(comandos) + 1
         comprimento = len(comandos)
-        Ncomandos = int.to_bytes(comprimento_err,length=comprimento_rr,byteorder="little")
+        Ncomandos = int.to_bytes(comprimento_err,length=comprimento_err,byteorder="little")
         #com1.sendData(np.asarray(Ncomandos))
     
         for cmd in comandos:
