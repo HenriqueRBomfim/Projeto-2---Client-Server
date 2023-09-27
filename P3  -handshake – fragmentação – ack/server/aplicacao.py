@@ -13,7 +13,8 @@
 from enlace import *
 import time
 import numpy as np
-
+import random
+from utils import *
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
 #   python -m serial.tools.list_ports
@@ -24,7 +25,6 @@ import numpy as np
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
 serialName = "COM4"                  # Windows(variacao de)
 
-
 def main():
     try:
         print("Iniciou o main")
@@ -32,82 +32,59 @@ def main():
         #para declarar esse objeto é o nome da porta.
         com1 = enlace(serialName)
         
-    
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print("Abriu a comunicação")
+        
+        #aqui você deverá gerar os dados a serem transmitidos. 
+        #seus dados a serem transmitidos são um array bytes a serem transmitidos. Gere esta lista com o 
+        #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
        
-        
-        timeout = 5
-        #acesso aos bytes recebidos
-        comando_1 = b'\x00\x00\x00\x00'
-        comando_2 = b'\x00\x00\xBB\x00'
-        comando_3 = b'\xBB\x00\x00'
-        comando_4 = b'\x00\xBB\x00'
-        comando_5 = b'\x00\x00\xBB'
-        comando_6 = b'\x00\xAA'
-        comando_7 = b'\xBB\x00'
-        comando_8 = b'\x00'
-        comando_9 = b'\xBB'
-        
-        byteFim = b'\xCC'
-        #txLen = len(txBuffer)
-        
-        #byte para dizer o tamanho do comando
-        
-        print("esperando 1 byte de sacrifício")
-        rxBuffer, nRx = com1.getData(1)
-        print(rxBuffer)
-        com1.rx.clearBuffer()
-        print('limpou')
-        time.sleep(.1)
-       
-        recebidos = 0
-        comandos = []
-        
-       
-        while rxBuffer[0] != byteFim:
-            print("recebendo lenght do comando")
-            rxBuffer,nRx = com1.getData(1)
-            time.sleep(.2)
-            
-            clen = int.from_bytes(rxBuffer, byteorder="little")
-            time.sleep(.5)
-            
-            if clen == 204:
-                break
-            
-            else:
-                print(f'o tamanho do comando esperado é: {clen}')
-                time.sleep(.1)
-                
-                rxBuffer,nRx = com1.getData(clen)
-                print(f'recebi: {rxBuffer}')
-                comandos.append(rxBuffer)
-                time.sleep(.1)
-            
+       #bit de sacrificio
+        com1.sendData(b'\x00')
+        time.sleep(1)
 
+        #carregando imagem
+        imagemR = "client\imagem.png"
+        imagem_bytes = open(imagemR, "rb").read()
+        #tamanho = len(txBuffer)    
+
+        #comecando a transmissao de pacotes
+        handshake(com1)
+       
+        payloads,qtd = monta_payloads(imagem_bytes, len(imagem_bytes))
+        pacotes = monta_pacotes(payloads, qtd,0)
+
+        #enviando pacotes
+        for pacote in pacotes:
+            com1.sendData(pacote)
+            print("Pacote enviado")
+            print(pacote)
+            time.sleep(0.1)
         
-        print('')
-        print(f'o número de comandos recebidos foi: {len(comandos)}')
-        print('')
+            data,_ = com1.getData(15)
+            print(data[0])
+            time.sleep(0.1)
+            if data[0] == b'\x07':
+                pass
+            else:
+                print("Erro no pacote")
+                print(data)
+                com1.sendData(pacote)
+                time.sleep(0.1)
+            
+       
         
-        #caso inconsistente
-        comprimento_err = len(comandos) + 1
-        comprimento = len(comandos)
-        Ncomandos = int.to_bytes(comprimento_err,length=comprimento_err,byteorder="little")
-        #com1.sendData(np.asarray(Ncomandos))
     
-        for cmd in comandos:
-            print(cmd)
     
-        
+
         # Encerra comunicação
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
         com1.disable()
+        
         
     except Exception as erro:
         print("ops! :-\\")
