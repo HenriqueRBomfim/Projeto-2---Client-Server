@@ -81,13 +81,13 @@ class RX(object):
 
     def getNData(self, size):
         tempo_inicial = time.time()
-        duracao_maxima = 3
+        duracao_maxima = 5
         while(self.getBufferLen() < size):
             time.sleep(0.05) 
             #print("Erro no NData")    
             if ((time.time() - tempo_inicial) > duracao_maxima):
-                return None, False              
-        return(self.getBuffer(size), True)
+                return None, True             
+        return(self.getBuffer(size), False)
 
     def clearBuffer(self):
         self.buffer = b""
