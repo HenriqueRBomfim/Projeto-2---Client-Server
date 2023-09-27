@@ -15,6 +15,7 @@ from enlace import *
 import time
 import numpy as np
 from utils import *
+import datetime
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -28,13 +29,13 @@ serialName = "COM6"                  # Windows(variacao de)
 
 def main():
     try:
-        with open('log.txt', 'w') as f:
+        with open('Client4.txt', 'w') as f:
             print("Iniciou o main")
             com1 = enlace(serialName)
             com1.enable()
 
             print("Abriu a comunicação")
-            img = 'img\imageW.png'; img_bin = open(img,'rb').read() # id = 1
+            img = 'img/imageW.png'; img_bin = open(img,'rb').read() # id = 1
             payloads_list = monta_payload(img_bin) # Lista com a imagem divida em varios payloads
             
             # Mensagem tipo 1
@@ -43,6 +44,8 @@ def main():
 
             com1.sendData(b'00'); time.sleep(.1) # bit de sacrificio
             com1.sendData(handshake_client); time.sleep(.1)
+            f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 1 / {0 + 14 }/" '\n')
+            print('Handshake enviado. Esperando resposta do servidor.')
 
             inicia = False
 
@@ -56,74 +59,82 @@ def main():
                     if inicia == 'S':
                         com1.sendData(b'00'); time.sleep(.1) # bit de sacrificio
                         com1.sendData(handshake_client); time.sleep(.1)
+                        f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 1 / {0 + 14 }/" '\n')
                     elif inicia == 'N':
                         print('Servidor inativo. Tente novamente mais tarde.'); com1.disable(); return
                 else:
                     handshake_server, _, estourou_tempo = com1.getData(14)
+                    f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/receb/ 2 / {0 + 14 }/" '\n')
                     # Vê se é mensagem tipo 2
+                    print('Handshake está certo')
                     is_handshake_correct = verifica_handshake(handshake_server, True)
+                    print('Verificou o handshake')
                     if not is_handshake_correct:
                         print('Handshake diferente do esperado. Tente novamente mais tarde.'); com1.disable(); return
                     elif is_handshake_correct:
                         print("Handshake vindo do server está correto."); break
 
             current_package = 1
+            ultimo_pacote_certo = 0
+            permissao = True
             while current_package <= len(payloads_list):
                 payload = payloads_list[current_package - 1]
                 tamanho = len(payload)
                 # if current_package == 4:
                 #     tamanho = len(payload) - 1
 
-                # Mensagem tipo 3
-                HEAD_content_client = bytes([3,0,0,len(payloads_list),current_package,tamanho,0,current_package-1,0,0]) 
-                package = HEAD_content_client + payload + EOP
-                com1.sendData(np.asarray(package))
-
-                # if current_package == 4:
+                # if current_package == 4 and permissao == True:
                 #     current_package += 1
 
-                estourou_tempo = False
+                print("Ultimo pacote certo: ", ultimo_pacote_certo)
+                print("Pacote atual: ", current_package)
+
+                # Mensagem tipo 3
+                HEAD_content_client = bytes([3,0,0,len(payloads_list),current_package,tamanho,0,ultimo_pacote_certo,0,0]) 
+                package = HEAD_content_client + payload + EOP
+
+                estourou_tempo = True
                 time_2 = time.time()//1
                 
-                while (atualiza_tempo(time_2) < 20) and estourou_tempo == True:
+                while (atualiza_tempo(time_2) < 20) and (estourou_tempo == True):
                     # Recepção da mensagem tipo 4
                     feedback_to_client, _, estourou_tempo = com1.getData(14) # Tenta pegar por 5 segundos
+                    if feedback_to_client != None:
+                        print("Feedback",feedback_to_client)
                     if estourou_tempo == True: # Se passar de 5 segundos entra aqui
                         com1.sendData(np.asarray(package))
+                        f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 3 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/" '\n')
                     time.sleep(.1)
                     com1.rx.clearBuffer()
                 
                 if atualiza_tempo(time_2) >= 20:
-                    HEAD_timeout_client = bytes([5,0,0,len(payloads_list),current_package,tamanho,0,current_package-1,0,0]) 
-                    package = HEAD_timeout_client + payload + EOP
+                    HEAD_timeout_client = bytes([5,0,0,len(payloads_list),current_package,tamanho,0,ultimo_pacote_certo,0,0]) 
+                    package = HEAD_timeout_client + EOP
                     com1.sendData(np.asarray(package))
+                    f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 5 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/" '\n')
                     print("-------------------------\nComunicação encerrada\n-------------------------")
                     com1.disable()
+                    break
                 else:
-                    if feedback_to_client[0] == b'\x06':
-                        erro_server, _, estourou_tempo = com1.getData(14)
-                        pacote_certo = int.from_bytes(erro_server[6], "little")
+                    if feedback_to_client[0] == 4:
+                        ultimo_pacote_certo += 1
+                        f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/receb/ 4 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/" '\n')
+                        print(f'Pacote {current_package} enviado com sucesso.')
+                        current_package += 1
+                    elif feedback_to_client[0] == 6:
+                        f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/receb/ 6 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/" '\n')
+                        pacote_certo = feedback_to_client[6]
                         current_package = pacote_certo
-                        com1.sendData(np.asarray(payloads_list[current_package - 1]))
-                        
-                if feedback_to_client[0] == b'\x04':
-                    print(f'Pacote {current_package} enviado com sucesso.')
-                    current_package += 1
+                        permissao = False
+                        com1.sendData(np.asarray(HEAD_content_client + payloads_list[current_package - 1] + EOP))
+                        print("com1")
+                        f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 3 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/" '\n')
 
                 com1.rx.clearBuffer(); time.sleep(.1)
 
-            HEAD_final_server, _, estourou_tempo = com1.getData(10) # Recebendo o HEAD do server
-            is_transmission_correct = (HEAD_final_server[2] == 1)
-            EOP_final_server, _, estourou_tempo = com1.getData(4) # Recebendo o EOP do server
-            package_final_server = HEAD_final_server + EOP_final_server
-            is_eop_correct = verifica_eop(package_final_server, HEAD_final_server)
-
-            if not is_transmission_correct:
-                print('Erro no envio dos pacotes. Tente novamente.')
-            if is_transmission_correct and is_eop_correct:
+            if current_package >= len(payloads_list):
                 print('Transmissão bem sucedida')
-        
-            print("-------------------------\nComunicação encerrada\n-------------------------"); com1.disable()
+                print("-------------------------\nComunicação encerrada\n-------------------------"); com1.disable()
         
     except Exception as erro:
         print("ops! :-\\")
