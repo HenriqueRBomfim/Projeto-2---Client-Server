@@ -16,6 +16,7 @@ import time
 import numpy as np
 from utils import *
 import datetime
+import crcmod
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -25,17 +26,17 @@ import datetime
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM1"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM6"                  # Windows(variacao de)
+serialName = "COM5"                  # Windows(variacao de)
 
 def main():
     try:
-        with open('Client4.txt', 'w') as f:
+        with open('client/Client3.txt', 'w') as f:
             print("Iniciou o main")
             com1 = enlace(serialName)
             com1.enable()
 
             print("Abriu a comunicação")
-            img = 'img/imageW.png'; img_bin = open(img,'rb').read() # id = 1
+            img = 'client/img/imageW.png'; img_bin = open(img,'rb').read() # id = 1
             payloads_list = monta_payload(img_bin) # Lista com a imagem divida em varios payloads
             
             # Mensagem tipo 1
@@ -83,14 +84,23 @@ def main():
                 # if current_package == 4:
                 #     tamanho = len(payload) - 1
 
-                # if current_package == 4 and permissao == True:
-                #     current_package += 1
+                if current_package == 4 and permissao == True:
+                    current_package += 1
 
                 print("Ultimo pacote certo: ", ultimo_pacote_certo)
                 print("Pacote atual: ", current_package)
 
+                crc16 = crcmod.predefined.Crc('crc-16')
+                crc16.update(payload)
+                crc_bytes = crc16.crcValue.to_bytes(2, byteorder='little')
+                byte1 = crc_bytes[0]
+                byte2 = crc_bytes[1]
+                CRC = b""
+                CRC += bytes([byte1])
+                CRC += bytes([byte2])
+
                 # Mensagem tipo 3
-                HEAD_content_client = bytes([3,0,0,len(payloads_list),current_package,tamanho,0,ultimo_pacote_certo,0,0]) 
+                HEAD_content_client = bytes([3,0,0,len(payloads_list),current_package,tamanho,0,ultimo_pacote_certo,byte1,byte2]) 
                 package = HEAD_content_client + payload + EOP
 
                 estourou_tempo = True
@@ -103,7 +113,7 @@ def main():
                         print("Feedback",feedback_to_client)
                     if estourou_tempo == True: # Se passar de 5 segundos entra aqui
                         com1.sendData(np.asarray(package))
-                        f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 3 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/" '\n')
+                        f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 3 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/{hex(int.from_bytes(CRC, byteorder='little'))}" '\n')
                     time.sleep(.1)
                     com1.rx.clearBuffer()
                 
@@ -112,7 +122,7 @@ def main():
                     package = HEAD_timeout_client + EOP
                     com1.sendData(np.asarray(package))
                     f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/envio/ 5 / {tamanho + 14 }/{current_package}/{len(payloads_list)}/" '\n')
-                    print("-------------------------\nComunicação encerrada\n-------------------------")
+                    print("--------------------------------------\nComunicação encerrada por tempo limite excedido\n--------------------------------------")
                     com1.disable()
                     break
                 else:
