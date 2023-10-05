@@ -25,7 +25,7 @@ import datetime
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu  (variacao de)
 #serialName = "/dev/tty.usbmodem1411"  # Mac     (variacao de)
-serialName = "COM3"                    # Windows (variacao de)
+serialName = "COM4"                    # Windows (variacao de)
 
 
 def main():
@@ -43,7 +43,7 @@ def main():
             com1.rx.clearBuffer(); time.sleep(.1)
             print('1 byte de sacrifício recebido. Limpou o buffer')
             HEAD_handshake_client, _  = com1.getData(10); time.sleep(.1)
-            f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/recebido/ 1 / 14" '\n')
+            f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/recebido/ 1 / 14 /" '\n')
             is_handshake_correct = verifica_handshake(HEAD_handshake_client[0:2], False)
             print('verifiquei handshake') #verificando se o handshake é o esperado
 
@@ -70,19 +70,24 @@ def main():
                 
                 while (atualiza_tempo(time_2) < 20) and cont <= total_of_packages:
                     time1 = time.time()//1
-                    print('sai do while de 2')
                     while atualiza_tempo(time1) < 2:
                         if cont <= total_of_packages: 
                             HEAD_client, _  = com1.getData(10); time.sleep(.1)
                             #print(f'HEAD_client: {HEAD_client}')
                             #print(f'cont: {cont}')
-                            tipo_de_mensagem,total_of_packages, current_package, variavel, pacote_erro, ultimo_pacote_sucesso = retirando_informacoes_do_head(HEAD_client) 
+                            tipo_de_mensagem,total_of_packages, current_package, variavel, pacote_erro, ultimo_pacote_sucesso, crc1,crc2 = retirando_informacoes_do_head(HEAD_client) 
+                            CRC = b""
+                            CRC += bytes([crc1])
+                            CRC += bytes([crc2])
+                            CRC = int.from_bytes(CRC, byteorder='little')
+                            print(f'')
                             #print(f' tipo da mensagem: {tipo_de_mensagem}')
                             if tipo_de_mensagem == 5:
                                 print('chegou na mensagem tipo 5')
                                 f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/recebido/ 5 / 14" '\n')
                                 print('Tempo de espera excedido')
-                                com1.disable()
+                                print("-------------------------\nComunicação encerrada\n-------------------------"); com1.disable()
+                                
                                 
                             if tipo_de_mensagem == 3:
                                 time_2 = time.time()
@@ -90,7 +95,7 @@ def main():
                                 print('chegou na mensagem tipo 3')
                                 rest_of_package_client, _ = com1.getData(variavel + 4); time.sleep(.1)
                                 package_client = HEAD_client + rest_of_package_client
-                                f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/recebido/ 3 / {variavel + 14 }/{current_package}/{total_of_packages}" '\n')
+                                f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +f"/recebido/ 3 / {variavel + 14 }/{current_package}/{total_of_packages}/{hex(CRC)}" '\n')
                                 HEAD_client, payload_client, EOP_client = tratar_pacote_recebido(package_client) #separando head, payloas e eop.
 
                                 if not verifica_pacote(package_client):
@@ -101,10 +106,10 @@ def main():
                                     
                                 else:
                                     print(f'Pacote {current_package} recebido')
-                                    com1.sendData(bytes([4,0,0,0,0,0,0,ultimo_pacote_sucesso,0,0])+EOP)
-                                    f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/enviado/ 4 / 14" '\n')
+                                    #com1.sendData(bytes([4,0,0,0,0,0,0,ultimo_pacote_sucesso,0,0])+EOP)
+                                    #f.write(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' +"/enviado/ 4 / 14" '\n')
                                     cont += 1
-                                    print('mensagem tipo 4 enviada')
+                                    #print('mensagem tipo 4 enviada')
                                     img_received += payload_client # pegando e guardando as informações do payload
                         
                 if atualiza_tempo(time_2) >= 20:

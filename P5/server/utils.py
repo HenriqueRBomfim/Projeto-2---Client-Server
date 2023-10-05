@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from math import ceil
+import crcmod
 
 HEAD_handshake_server = bytes([2,1,0,0,0,0,0,0,0,0,0,0])
 
@@ -11,6 +12,23 @@ def atualiza_tempo(tempo_ref):
     tempo_atual = float(time.time())
     referencia = float(tempo_atual-tempo_ref)
     return referencia 
+
+def verifica_crc(pacote): 
+    """
+    Função que verifica se o CRC é o esperado
+    """
+    head = pacote[:10]
+    crc1 = head[8]
+    crc2 = head[9]
+    payload = pacote[10:-4]
+    crc16 = crcmod.predefined.Crc('crc-16')
+    crc16.update(payload)
+    crc_bytes = crc16.crcValue.to_bytes(2, byteorder='little')
+    if crc_bytes == bytes([crc1, crc2]):
+        print('CRC verificado com sucesso')
+        return True
+    print('CRC incorreto')
+    return False
 
 def verifica_handshake(head, is_server):
     """
@@ -72,6 +90,7 @@ def monta_payload(informacao):
             print(f'tamanho dos payloads intermediarios :{len(payload)} ')
         payloads.append(payload)
     return payloads
+print(monta_payload(2000))
 
 def reagrupamento(lista_dos_payloads,tamanho_total_da_info, numero_de_pacotes_recebidos):
     """
@@ -110,11 +129,13 @@ def retirando_informacoes_do_head(head):
     variavel = head[5] 
     pacote_erro = head[6]
     ultimo_pacote_sucesso = head[7]
+    crc1 = head[8]
+    crc2 = head[9]
 
-    return tipo_de_mensagem, numero_total_de_pacotes, numero_do_pacote, variavel, pacote_erro, ultimo_pacote_sucesso
+    return tipo_de_mensagem, numero_total_de_pacotes, numero_do_pacote, variavel, pacote_erro, ultimo_pacote_sucesso, crc1, crc2
     
 def verifica_pacote(pacote):
-    tipo_de_mensagem, numero_total_de_pacotes, numero_do_pacote, variavel, pacote_erro, ultimo_pacote_sucesso = retirando_informacoes_do_head(pacote[:10])
+    tipo_de_mensagem, numero_total_de_pacotes, numero_do_pacote, variavel, pacote_erro, ultimo_pacote_sucesso,crc1,crc2 = retirando_informacoes_do_head(pacote[:10])
     if tipo_de_mensagem == 3:
         if variavel != len(pacote) - 14:
             return False
@@ -123,6 +144,8 @@ def verifica_pacote(pacote):
         if numero_do_pacote != ultimo_pacote_sucesso + 1:
             return False
         if not verifica_eop(pacote, pacote[:10]):
+            return False
+        if not verifica_crc(pacote):
             return False
     return True 
     
