@@ -1,0 +1,24 @@
+• getBufferLen
+Retorna o comprimento do buffer
+
+• getAllBuffer
+Pausa o thread, ou seja, impede ele de continuar mandando informações para o buffer
+Depois salva o buffer atual em uma variável b
+Zera/Limpa o buffer
+Continua o Thread
+Retorna o b, que era o buffer até a função ser usada
+
+• getBuffer
+Pausa o Thread de mandar informações.
+Salva o que estiver guardado no buffer do começo até um ponto de parada chamado nData.
+Define o buffer como o que tinha nele a partir do nData até o final
+
+• getNData
+Enquanto o comprimento da lista de bytes buffer for menor que um tamanho solicitado o código continuará esperando.
+Quando chegar no valor solicitado, ele vai devolver o buffer até aquele tamanho, posição.
+
+• sendBuffer
+""" O transLen diz o tamanho do que está no transmissor será 0, ou seja, zera a informação que se sabe sobre o tamanho dele
+        Depois define o buffer como a informação que a função recebe
+        Aí define o threadMutex como True
+        """
