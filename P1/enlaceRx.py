@@ -50,10 +50,16 @@ class RX(object):
         else:
             return(False)
 
-    def getBufferLen(self): #
+    def getBufferLen(self):
+        '''Retorna o comprimento do buffer'''
         return(len(self.buffer))
 
     def getAllBuffer(self, len):
+        """Pausa o thread, ou seja, impede ele de continuar mandando informações para o buffer.
+        Depois salva o buffer atual em uma variável b.
+        Zera/Limpa o buffer.
+        Continua o Thread.
+        Retorna o b, que era o buffer até a função ser usada."""
         self.threadPause()
         b = self.buffer[:]
         self.clearBuffer()
@@ -61,13 +67,23 @@ class RX(object):
         return(b)
 
     def getBuffer(self, nData):
+        """Pausa o Thread de mandar informações.
+        Tendo em vista que o Buffer é uma lista de bytes:
+        Salva o que estiver guardado no buffer do começo até um ponto de parada chamado nData.(Faz um recorte)
+        Define o buffer como o que tinha nele a partir do nData até o final
+        Libera o Thread para mandar informações novamente
+        Retorna o trecho desejado do Buffer"""
         self.threadPause()
         b           = self.buffer[0:nData]
         self.buffer = self.buffer[nData:]
         self.threadResume()
         return(b)
 
-    def getNData(self, size):   
+    def getNData(self, size):
+        """ Enquanto o comprimento da lista de bytes buffer for menor que um tamanho solicitado
+        o código continuará esperando.
+        Quando chegar no valor solicitado, ele vai devolver o buffer até aquele tamanho, posição.
+        """
         while(self.getBufferLen() < size):
             time.sleep(0.05)                 
         return(self.getBuffer(size))

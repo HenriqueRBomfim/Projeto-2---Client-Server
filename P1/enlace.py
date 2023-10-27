@@ -18,6 +18,7 @@ from enlaceRx import RX
 from enlaceTx import TX
 
 class enlace(object):
+    '''Conexão entre o computador e o arduíno'''
     
     def __init__(self, name):
         self.fisica      = fisica(name)
