@@ -1,6 +1,3 @@
-
-#importe as bibliotecas
-from suaBibSignal import *
 import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
@@ -85,16 +82,23 @@ def main():
     plt.figure(figsize=(12, 6))
     plt.subplot(2, 1, 1)
     plt.title("Sinal no Domínio do Tempo")
+    plt.xlim(0, 0.01)
     plt.plot(np.arange(0, duration, 1/fs), dtmf_signal)
     plt.xlabel("Tempo (s)")
     plt.grid()
 
-    # Calcular e exibir a transformada de Fourier
+    # Calcular a Transformada de Fourier do sinal
+    N = len(dtmf_signal)
+    fft_result = np.fft.fft(dtmf_signal)
+    freq = np.fft.fftfreq(N, 1/fs)
+    
+    # Exibir o gráfico no domínio da frequência (Transformada de Fourier)
     plt.subplot(2, 1, 2)
     plt.title("Transformada de Fourier")
-    plt.specgram(dtmf_signal, Fs=fs, NFFT=1024, noverlap=512, cmap='viridis')
-    plt.xlabel("Tempo (s)")
-    plt.ylabel("Frequência (Hz)")
+    plt.plot(freq, np.abs(fft_result))
+    plt.xlim(0, 2000)  # Limite as frequências exibidas
+    plt.xlabel("Frequência (Hz)")
+    plt.ylabel("Amplitude")
     plt.grid()
 
     plt.tight_layout()

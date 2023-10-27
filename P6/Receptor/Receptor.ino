@@ -1,4 +1,4 @@
-int pinoServidor = 7; // número do pino usado pelo Arduino para receber dados
+int pinoServidor = 8; // número do pino usado pelo Arduino para receber dados
 float baudrate = 9600; // 9600 bits por segundo
 int mensagem;
 
