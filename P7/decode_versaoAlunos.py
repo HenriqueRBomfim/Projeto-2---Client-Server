@@ -92,14 +92,14 @@ def main():
         picos.append(xf[pico])
     
     #encontre na tabela duas frequencias proximas às frequencias de pico encontradas e descubra qual foi a tecla
-    for valor in dtmf_freqs.values():
-        if valor[0] + 20 valor[0] > valor[0] + 20 in picos:
-            tecla = list(dtmf_freqs.keys())[list(dtmf_freqs.values()).index(valor)]
-            break
-        if valor[1] in picos:
-            tecla = list(dtmf_freqs.keys())[list(dtmf_freqs.values()).index(valor)]
-            break
-    print("A tecla pressionada foi: {}".format(tecla))
+    
+    # for tupla in dtmf_freqs.values():
+    #     if tupla[0] + 20 > picos[0] > tupla[0] - 20:
+    #         if tupla[1] + 20 > picos[1] >tupla[1] - 20:
+    #             tecla = list(dtmf_freqs.keys())[list(dtmf_freqs.values()).index(tupla)]
+    #             break
+            
+    #print("A tecla pressionada foi: {}".format(tecla))
     #print o valor tecla!!!
     #Se acertou, parabens! Voce construiu um sistema DTMF
 
