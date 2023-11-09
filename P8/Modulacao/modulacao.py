@@ -19,13 +19,29 @@ print("Gravação concluída. Agora vamos processar o áudio.")
 # Abrir o arquivo de áudio corretamente
 yAudioNormalizado, samplerate = sf.read('P8/gravacao.wav')
 
-# Parâmetros do filtro
-nyq_rate = samplerate / 2
-width = 5.0 / nyq_rate
-ripple_db = 60.0  # dB
-N, beta = signal.kaiserord(ripple_db, width)
-cutoff_hz = 4000.0
-taps = signal.firwin(N, cutoff_hz / nyq_rate, window=('kaiser', beta))
+def filtrar(signal):
+    a = 0.001547
+    b = 0.00149
+    c = 1
+    d = -1.89
+    e = 0.8928
+    Ylist = []
+    Ylist.append(signal[0])
+    Ylist.append(signal[1])
+    for i in range(2, len(signal)):
+        H = -d * Ylist[i - 1] - e * Ylist[i - 2] + a * signal[i - 1] + b * signal[i - 2]
+        Ylist.append(H)
+    return Ylist
+
+# # Parâmetros do filtro
+# nyq_rate = samplerate / 2
+# width = 5.0 / nyq_rate
+# ripple_db = 60.0  # dB
+# N, beta = signal.kaiserord(ripple_db, width)
+# cutoff_hz = 4000.0
+# taps = signal.firwin(N, cutoff_hz / nyq_rate, window=('kaiser', beta))
+
+taps = filtrar(yAudioNormalizado)
 
 # Aviso antes de filtrar o áudio
 print("Áudio carregado. Agora aplicaremos um filtro.")
