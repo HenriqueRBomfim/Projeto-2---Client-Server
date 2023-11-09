@@ -1,10 +1,11 @@
 import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
-from scipy.io.wavfile import write, read
+import soundfile as sf
+from scipy.io.wavfile import write
 from scipy import signal, fft
 
-# Aviso antes de gravar o áudio
+#Aviso antes de gravar o áudio
 print("Aguarde antes de começar a falar. A gravação terá uma duração de 5 segundos.")
 duration = 5  # segundos
 samplerate = 44100
@@ -16,7 +17,7 @@ write('gravacao.wav', samplerate, audio)
 print("Gravação concluída. Agora vamos processar o áudio.")
 
 # Abrir o arquivo de áudio corretamente
-samplerate, yAudioNormalizado = read('gravacao.wav')
+yAudioNormalizado, samplerate = sf.read('gravacao.wav')
 
 # Parâmetros do filtro
 nyq_rate = samplerate / 2
@@ -46,8 +47,21 @@ portadora_freq = 14000.0
 portadora = np.sin(2 * np.pi * portadora_freq * np.arange(len(yFiltrado)) / samplerate)
 sinal_modulado = yFiltrado * portadora
 
+# Salvar áudio modulado
+write('audio_modulado.wav', samplerate, sinal_modulado)
+
+# Aviso antes de reproduzir o áudio modulado
+print("Modulação em amplitude concluída. Agora reproduziremos o áudio modulado.")
+
+# Reproduzir o áudio modulado
+audio_modulado, _ = sf.read('audio_modulado.wav')
+sd.play(audio_modulado, samplerate)
+
+# Aguardar a reprodução terminar
+sd.wait()
+
 # Aviso antes de normalizar o sinal modulado
-print("Modulação em amplitude concluída. Agora normalizaremos o sinal.")
+print("Reprodução concluída. Agora normalizaremos o sinal modulado.")
 
 # Normalizar o sinal modulado
 max_amplitude = np.max(np.abs(sinal_modulado))
