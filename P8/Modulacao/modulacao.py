@@ -11,13 +11,13 @@ duration = 5  # segundos
 samplerate = 44100
 audio = sd.rec(int(samplerate * duration), samplerate=samplerate, channels=1, dtype=np.int16)
 sd.wait()
-write('gravacao.wav', samplerate, audio)
+write('P8/gravacao.wav', samplerate, audio)
 
 # Aviso antes de abrir o arquivo de áudio
 print("Gravação concluída. Agora vamos processar o áudio.")
 
 # Abrir o arquivo de áudio corretamente
-yAudioNormalizado, samplerate = sf.read('gravacao.wav')
+yAudioNormalizado, samplerate = sf.read('P8/gravacao.wav')
 
 # Parâmetros do filtro
 nyq_rate = samplerate / 2
@@ -37,7 +37,7 @@ yFiltrado = signal.lfilter(taps, 1.0, yAudioNormalizado)
 print("Filtro aplicado. Agora salvaremos o áudio filtrado.")
 
 # Salvar áudio filtrado
-write('audio_filtrado.wav', samplerate, yFiltrado)
+write('P8/audio_filtrado.wav', samplerate, yFiltrado)
 
 # Aviso antes de iniciar a modulação em amplitude
 print("Áudio filtrado salvo. Agora realizaremos a modulação em amplitude.")
