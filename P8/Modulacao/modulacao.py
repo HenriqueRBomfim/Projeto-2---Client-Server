@@ -64,14 +64,14 @@ portadora = np.sin(2 * np.pi * portadora_freq * np.arange(len(yFiltrado)) / samp
 sinal_modulado = yFiltrado * portadora
 
 # Salvar áudio modulado
-write('audio_modulado.wav', samplerate, sinal_modulado)
+write('P8/audio_modulado.wav', samplerate, sinal_modulado)
 
 # Aviso antes de reproduzir o áudio modulado
 print("Modulação em amplitude concluída. Agora reproduziremos o áudio modulado.")
 
 # Reproduzir o áudio modulado
-audio_modulado, _ = sf.read('audio_modulado.wav')
-sd.play(audio_modulado, samplerate)
+audio_modulado, _ = sf.read('P8/audio_modulado.wav')
+#sd.play(audio_modulado, samplerate)
 
 # Aguardar a reprodução terminar
 sd.wait()
