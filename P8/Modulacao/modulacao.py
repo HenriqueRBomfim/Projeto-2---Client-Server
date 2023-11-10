@@ -2,29 +2,35 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import soundfile as sf
-from scipy.io.wavfile import write
+from scipy.io import wavfile
 from scipy import signal, fft
+from suaBibSignal import signalMeu
 
 #Aviso antes de gravar o áudio
-print("Aguarde antes de começar a falar. A gravação terá uma duração de 5 segundos.")
-duration = 5  # segundos
-samplerate = 44100
-audio = sd.rec(int(samplerate * duration), samplerate=samplerate, channels=1, dtype=np.int16)
-sd.wait()
-write('P8/gravacao.wav', samplerate, audio)
+# print("Aguarde antes de começar a falar. A gravação terá uma duração de 5 segundos.")
+# duration = 5  # segundos
+# samplerate = 44100
+# audio = sd.rec(int(samplerate * duration), samplerate=samplerate, channels=1, dtype=np.int16)
+# sd.wait()
+# write('P8/gravacao.wav', samplerate, audio)
 
 # Aviso antes de abrir o arquivo de áudio
 print("Gravação concluída. Agora vamos processar o áudio.")
 
+signall = signalMeu()
+
 # Abrir o arquivo de áudio corretamente
-yAudioNormalizado, samplerate = sf.read('P8/gravacao.wav')
+yAudio, samplerate = sf.read('P8/gravacao.wav')
+max_amplitude = np.max(np.abs(yAudio))
+yAudioNormalizado = yAudio / max_amplitude
+wavfile.write('P8/audio_normalizado.wav', samplerate, np.array(yAudioNormalizado))
 
 def filtrar(signal):
-    a = 0.001547
-    b = 0.00149
+    a = 0.002988
+    b = 0.002834
     c = 1
-    d = -1.89
-    e = 0.8928
+    d = -1.847
+    e = 0.8532
     Ylist = []
     Ylist.append(signal[0])
     Ylist.append(signal[1])
@@ -41,19 +47,20 @@ def filtrar(signal):
 # cutoff_hz = 4000.0
 # taps = signal.firwin(N, cutoff_hz / nyq_rate, window=('kaiser', beta))
 
-taps = filtrar(yAudioNormalizado)
+#taps = filtrar(yAudioNormalizado)
 
 # Aviso antes de filtrar o áudio
 print("Áudio carregado. Agora aplicaremos um filtro.")
 
 # Filtrar o áudio corretamente
-yFiltrado = signal.lfilter(taps, 1.0, yAudioNormalizado)
+#yFiltrado = signal.lfilter(taps, 1.0, yAudioNormalizado)
+yFiltrado = filtrar(yAudioNormalizado)
 
 # Aviso antes de salvar o áudio filtrado
 print("Filtro aplicado. Agora salvaremos o áudio filtrado.")
 
 # Salvar áudio filtrado
-write('P8/audio_filtrado.wav', samplerate, yFiltrado)
+wavfile.write('P8/audio_filtrado.wav', samplerate, np.array(yFiltrado))
 
 # Aviso antes de iniciar a modulação em amplitude
 print("Áudio filtrado salvo. Agora realizaremos a modulação em amplitude.")
@@ -64,17 +71,13 @@ portadora = np.sin(2 * np.pi * portadora_freq * np.arange(len(yFiltrado)) / samp
 sinal_modulado = yFiltrado * portadora
 
 # Salvar áudio modulado
-write('P8/audio_modulado.wav', samplerate, sinal_modulado)
+wavfile.write('P8/audio_modulado.wav', samplerate, np.array(sinal_modulado))
 
 # Aviso antes de reproduzir o áudio modulado
 print("Modulação em amplitude concluída. Agora reproduziremos o áudio modulado.")
 
 # Reproduzir o áudio modulado
 audio_modulado, _ = sf.read('P8/audio_modulado.wav')
-#sd.play(audio_modulado, samplerate)
-
-# Aguardar a reprodução terminar
-sd.wait()
 
 # Aviso antes de normalizar o sinal modulado
 print("Reprodução concluída. Agora normalizaremos o sinal modulado.")
@@ -87,35 +90,33 @@ sinal_modulado_normalizado = sinal_modulado / max_amplitude
 print("Sinal normalizado. Agora plotaremos os gráficos.")
 
 # Gráfico 1: Sinal de áudio original normalizado – domínio do tempo
-plt.figure(figsize=(12, 6))
-plt.subplot(2, 3, 1)
+plt.figure()
 plt.plot(yAudioNormalizado)
-plt.title('Sinal de Áudio Original Normalizado - Tempo')
+plt.title('Sinal de Áudio Normalizado - Tempo')
+plt.show()
 
 # Gráfico 2: Sinal de áudio filtrado – domínio do tempo
-plt.subplot(2, 3, 2)
+plt.figure()
 plt.plot(yFiltrado)
 plt.title('Sinal de Áudio Filtrado - Tempo')
+plt.show()
 
 # Gráfico 3: Sinal de áudio filtrado – domínio da frequência (Fourier)
-plt.subplot(2, 3, 3)
-frequencies, amplitudes = fft.fftfreq(len(yFiltrado), 1/samplerate), np.abs(fft.fft(yFiltrado))
-plt.plot(frequencies, amplitudes)
+signall.plotFFT(yFiltrado, samplerate)
 plt.title('Sinal de Áudio Filtrado - Frequência')
+plt.show()
 
 # Gráfico 4: Sinal de áudio modulado – domínio do tempo
-plt.subplot(2, 3, 4)
+plt.figure()
 plt.plot(sinal_modulado)
 plt.title('Sinal de Áudio Modulado - Tempo')
+plt.show()
 
 # Gráfico 5: Sinal de áudio modulado – domínio da frequência
-plt.subplot(2, 3, 5)
-frequencies_mod, amplitudes_mod = fft.fftfreq(len(sinal_modulado), 1/samplerate), np.abs(fft.fft(sinal_modulado))
-plt.plot(frequencies_mod, amplitudes_mod)
+signall.plotFFT(sinal_modulado, samplerate)
 plt.title('Sinal de Áudio Modulado - Frequência')
+plt.show()
 
 # Ajustar layout
 plt.tight_layout()
 
-# Mostrar os gráficos
-plt.show()

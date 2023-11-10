@@ -2,14 +2,30 @@ import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
 import soundfile as sf
-from scipy.io.wavfile import write
-from scipy import fft
-
-samplerate = 44100
+from scipy.io import wavfile
+from scipy import signal, fft
+from suaBibSignal import signalMeu
 
 # Reproduzir o áudio modulado
-audio_modulado, _ = sf.read('audio_modulado.wav')
-sd.play(audio_modulado, samplerate)
+audio_modulado, _ = sf.read('P8/audio_modulado.wav')
+samplerate = 44100
+portadora = 14000
+sinal = signalMeu()
+
+def filtrar(signal):
+    a = 0.002988
+    b = 0.002834
+    c = 1
+    d = -1.847
+    e = 0.8532
+    Ylist = []
+    Ylist.append(signal[0])
+    Ylist.append(signal[1])
+    for i in range(2, len(signal)):
+        H = -d * Ylist[i - 1] - e * Ylist[i - 2] + a * signal[i - 1] + b * signal[i - 2]
+        Ylist.append(H)
+    return Ylist
+#sd.play(audio_modulado, samplerate)
 
 # Aguardar a reprodução terminar
 sd.wait()
@@ -18,68 +34,46 @@ sd.wait()
 print("Reprodução concluída. Agora normalizaremos o sinal modulado.")
 
 # Normalizar o sinal modulado
-max_amplitude = np.max(np.abs(sinal_modulado))
-sinal_modulado_normalizado = sinal_modulado / max_amplitude
+audio_modulado_normalizado = audio_modulado
+
+# 9. Demodule o áudio enviado no segundo computador (receptor).
+
+portadora = np.sin(2 * np.pi * 14000 * np.arange(len(audio_modulado_normalizado)) / samplerate)
+sinal_demodulado = audio_modulado_normalizado * portadora
+
+# 10. Filtre as frequências superiores a 4kHz.
+sinal_demodulado_filtrado = filtrar(sinal_demodulado)
+sd.play(sinal_demodulado_filtrado, samplerate)
+
+# 11. Execute o áudio do sinal demodulado e verifique que novamente é audível.
+wavfile.write('P8/audio_demodulado_filtrado.wav', samplerate, np.array(sinal_demodulado_filtrado))
+audio_demodulado_filtrado, _ = sf.read('P8/audio_demodulado_filtrado.wav')
 
 # Aviso antes de plotar os gráficos
-print("Sinal normalizado. Agora plotaremos os gráficos.")
+print("Agora plotaremos os gráficos.")
 
-# Gráfico 1: Sinal de áudio original normalizado – domínio do tempo
-plt.figure(figsize=(15, 10))
-plt.subplot(3, 3, 1)
-plt.plot(yAudioNormalizado)
-plt.title('Sinal de Áudio Original Normalizado - Tempo')
-
-# Gráfico 2: Sinal de áudio filtrado – domínio do tempo
-plt.subplot(3, 3, 2)
-plt.plot(yFiltrado)
-plt.title('Sinal de Áudio Filtrado - Tempo')
-
-# Gráfico 3: Sinal de áudio filtrado – domínio da frequência (Fourier)
-plt.subplot(3, 3, 3)
-frequencies, amplitudes = fft.fftfreq(len(yFiltrado), 1/samplerate), np.abs(fft.fft(yFiltrado))
-plt.plot(frequencies, amplitudes)
-plt.title('Sinal de Áudio Filtrado - Frequência')
-
-# Demodulação
-demodulado = filtrar(sinal_modulado_normalizado)
-
-# Gráfico 4: Sinal de áudio demodulado – domínio do tempo
-plt.subplot(3, 3, 4)
-plt.plot(demodulado)
+# 12. Gráfico 6: Sinal de áudio demodulado – domínio do tempo.
+plt.figure()
+plt.plot(sinal_demodulado)
 plt.title('Sinal de Áudio Demodulado - Tempo')
-
-# Gráfico 5: Sinal de áudio demodulado – domínio da frequência
-plt.subplot(3, 3, 5)
-frequencies_demod, amplitudes_demod = fft.fftfreq(len(demodulado), 1/samplerate), np.abs(fft.fft(demodulado))
-plt.plot(frequencies_demod, amplitudes_demod)
-plt.title('Sinal de Áudio Demodulado - Frequência')
-
-# Filtragem
-sinal_filtrado = filtrar(demodulado)
-
-# Gráfico 6: Sinal de áudio demodulado e filtrado – domínio do tempo
-plt.subplot(3, 3, 6)
-plt.plot(sinal_filtrado)
-plt.title('Sinal de Áudio Demodulado e Filtrado - Tempo')
-
-# Gráfico 7: Sinal de áudio demodulado e filtrado – domínio da frequência
-plt.subplot(3, 3, 7)
-frequencies_filtrado, amplitudes_filtrado = fft.fftfreq(len(sinal_filtrado), 1/samplerate), np.abs(fft.fft(sinal_filtrado))
-plt.plot(frequencies_filtrado, amplitudes_filtrado)
-plt.title('Sinal de Áudio Demodulado e Filtrado - Frequência')
-
-# Ajustar layout
-plt.tight_layout()
-
-# Mostrar os gráficos
 plt.show()
 
-# Aviso antes de reproduzir o áudio demodulado e filtrado
-print("Gráficos exibidos. Agora reproduziremos o áudio demodulado e filtrado.")
+# 13. Gráfico 7: Sinal de áudio demodulado – domínio da frequência.
+sinal.plotFFT(sinal_demodulado, samplerate)
+plt.title('Sinal de áudio demodulado domínio da frequência')
+plt.xlabel('Frequência (Hz)')
+plt.ylabel('Amplitude')
+plt.show()
 
-# Reproduzir o áudio demodulado e filtrado
-sd.play(sinal_filtrado, samplerate)
+# 14. Gráfico 8: Sinal de áudio demodulado e filtrado – domínio da frequência.
 
-# Aguardar a reprodução terminar
+sinal.plotFFT(sinal_demodulado_filtrado, samplerate)
+plt.title('Sinal de áudio demodulado e filtrado domínio da frequência')
+plt.xlabel('Frequência (Hz)')
+plt.ylabel('Amplitude')
+plt.show()
+
+sd.play(audio_demodulado_filtrado, samplerate)
+
+# Aguarde a reprodução terminar
 sd.wait()
